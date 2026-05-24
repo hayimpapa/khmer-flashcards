@@ -53,7 +53,7 @@
 }
 .flip-card {
   transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(0.4, 0.05, 0.2, 1);
+  transition: transform 1s cubic-bezier(0.4, 0.05, 0.2, 1);
   position: relative;
 }
 .flip-card.flipped {
@@ -69,10 +69,11 @@
   transform: rotateY(180deg);
 }
 
-/* hide back content until after the flip completes */
+/* hide back content until after the flip completes so the answer
+   stays unreadable mid-flip */
 .back-content {
   opacity: 0;
-  transition: opacity 0.25s ease-in;
+  transition: opacity 0.3s ease-in;
 }
 .back-content.revealed {
   opacity: 1;
