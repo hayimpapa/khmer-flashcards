@@ -12,6 +12,15 @@ export default function StudyPage() {
   const [flipped, setFlipped] = useState(false)
   const [progress, setProgressState] = useState({})
   const [shuffleOn, setShuffleOn] = useState(false)
+  const [direction, setDirection] = useState(() => {
+    return localStorage.getItem('khmer-flashcards:direction') || 'khmer-first'
+  })
+
+  function changeDirection(next) {
+    setDirection(next)
+    localStorage.setItem('khmer-flashcards:direction', next)
+    setFlipped(false)
+  }
 
   useEffect(() => {
     let alive = true
@@ -115,8 +124,40 @@ export default function StudyPage() {
         />
       </div>
 
-      <div className="mt-8">
-        <Flashcard card={current} flipped={flipped} onFlip={() => setFlipped((f) => !f)} />
+      <div className="mt-4 flex items-center justify-center">
+        <div className="inline-flex rounded-lg border border-ink-200 bg-white p-1 text-xs">
+          <button
+            type="button"
+            onClick={() => changeDirection('khmer-first')}
+            className={`px-3 py-1.5 rounded-md transition-colors ${
+              direction === 'khmer-first'
+                ? 'bg-khmer-600 text-white shadow-sm'
+                : 'text-ink-800/70 hover:text-ink-900'
+            }`}
+          >
+            ខ្មែរ → English
+          </button>
+          <button
+            type="button"
+            onClick={() => changeDirection('english-first')}
+            className={`px-3 py-1.5 rounded-md transition-colors ${
+              direction === 'english-first'
+                ? 'bg-english-600 text-white shadow-sm'
+                : 'text-ink-800/70 hover:text-ink-900'
+            }`}
+          >
+            English → ខ្មែរ
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <Flashcard
+          card={current}
+          flipped={flipped}
+          onFlip={() => setFlipped((f) => !f)}
+          direction={direction}
+        />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

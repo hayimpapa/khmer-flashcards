@@ -56,6 +56,7 @@ export async function generateFlashcardsPdf({
   includePractice,
   includeImagePlaceholder,
   layout,
+  direction = 'khmer-first',
 }) {
   if (!cards || cards.length === 0) throw new Error('No cards selected.')
 
@@ -101,21 +102,54 @@ export async function generateFlashcardsPdf({
   // the back.
   const totalPages = Math.ceil(cards.length / perPage)
 
+  const khmerFirst = direction === 'khmer-first'
+  const frontLabel = khmerFirst ? 'Khmer' : 'English'
+  const backLabel = khmerFirst ? 'English' : 'Khmer'
+
   for (let p = 0; p < totalPages; p++) {
     const batch = cards.slice(p * perPage, p * perPage + perPage)
 
     // FRONT side
     if (p > 0) doc.addPage()
-    drawPageHeader(doc, `${deckName} — Front (page ${p + 1}/${totalPages})`, pageW, pageH)
-    batch.forEach((card, i) => drawFront(doc, slots[i], card, { includePractice }))
+    drawPageHeader(
+      doc,
+      `${deckName} — ${frontLabel} (page ${p + 1}/${totalPages})`,
+      pageW,
+      pageH,
+    )
+    batch.forEach((card, i) =>
+      khmerFirst
+        ? drawKhmerSide(doc, slots[i], card, {
+            includePractice,
+            includeImagePlaceholder,
+            isFront: true,
+          })
+        : drawEnglishSide(doc, slots[i], card, {
+            includeImagePlaceholder,
+            isFront: true,
+          }),
+    )
 
     // BACK side
     doc.addPage()
-    drawPageHeader(doc, `${deckName} — Back (page ${p + 1}/${totalPages})`, pageW, pageH)
-    // Mirror slot order so duplex backs line up with their fronts.
+    drawPageHeader(
+      doc,
+      `${deckName} — ${backLabel} (page ${p + 1}/${totalPages})`,
+      pageW,
+      pageH,
+    )
     const mirrored = mirrorSlots(slots, layout, pageW)
     batch.forEach((card, i) =>
-      drawBack(doc, mirrored[i], card, { includeImagePlaceholder }),
+      khmerFirst
+        ? drawEnglishSide(doc, mirrored[i], card, {
+            includeImagePlaceholder,
+            isFront: false,
+          })
+        : drawKhmerSide(doc, mirrored[i], card, {
+            includePractice,
+            includeImagePlaceholder,
+            isFront: false,
+          }),
     )
   }
 
@@ -149,115 +183,112 @@ function drawCardOutline(doc, slot) {
   doc.setLineDashPattern([], 0)
 }
 
-function drawFront(doc, slot, card, { includePractice }) {
-  drawCardOutline(doc, slot)
-
-  // Label
+function drawSideLabel(doc, slot, text, rgb) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.setTextColor(168, 95, 23) // khmer-600
-  doc.text('KHMER', slot.x + 14, slot.y + 18)
+  doc.setTextColor(...rgb)
+  doc.text(text, slot.x + 14, slot.y + 18)
+  doc.setTextColor(0)
+}
 
-  // Khmer Unicode (rendered to canvas → PNG)
-  const khmerHeight = slot.h * 0.36
+function drawCardImage(doc, slot, card, { includePlaceholder, tone }) {
+  // Returns the y-coordinate of the bottom of the image area (or null
+  // if no image area was drawn).
+  if (!includePlaceholder && !card.image_url) return null
+  const boxW = slot.w * 0.45
+  const boxH = slot.h * 0.34
+  const boxX = slot.x + (slot.w - boxW) / 2
+  const boxY = slot.y + 28
+  const hasImage = card.image_url && card.image_url.startsWith('data:image')
+  if (hasImage) {
+    try {
+      const fmt = /^data:image\/(jpe?g)/i.test(card.image_url) ? 'JPEG' : 'PNG'
+      doc.addImage(card.image_url, fmt, boxX, boxY, boxW, boxH, undefined, 'FAST')
+    } catch {
+      drawImageBox(doc, boxX, boxY, boxW, boxH, tone)
+    }
+  } else {
+    drawImageBox(doc, boxX, boxY, boxW, boxH, tone)
+  }
+  return boxY + boxH
+}
+
+function drawKhmerSide(doc, slot, card, { includePractice, includeImagePlaceholder }) {
+  drawCardOutline(doc, slot)
+  drawSideLabel(doc, slot, 'KHMER · ខ្មែរ', [168, 95, 23])
+
+  const imageBottom = drawCardImage(doc, slot, card, {
+    includePlaceholder: includeImagePlaceholder,
+    tone: 'khmer',
+  })
+
+  const khmerTop = (imageBottom ?? slot.y + 24) + 10
+  const khmerHeight = slot.h * 0.28
   placeKhmerImage(doc, card.khmer_text, {
     x: slot.x + 16,
-    y: slot.y + 24,
+    y: khmerTop,
     maxWidth: slot.w - 32,
     maxHeight: khmerHeight,
-    fontPx: 96,
+    fontPx: 88,
     weight: 700,
     color: '#7c4510',
   })
 
-  // Ruled handwriting lines (under the Khmer block)
-  let cursorY = slot.y + 24 + khmerHeight + 6
+  let cursorY = khmerTop + khmerHeight + 6
   if (includePractice) {
     const linesY = cursorY
-    const lineLeft = slot.x + 24
-    const lineRight = slot.x + slot.w - 24
-    const baseline = linesY + 28
+    const lineLeft = slot.x + 28
+    const lineRight = slot.x + slot.w - 28
+    const baseline = linesY + 24
     doc.setDrawColor(210)
     doc.setLineWidth(0.4)
-    // top guide
     doc.setLineDashPattern([2, 3], 0)
     doc.line(lineLeft, linesY, lineRight, linesY)
-    // mid (dotted)
-    doc.line(lineLeft, linesY + 14, lineRight, linesY + 14)
+    doc.line(lineLeft, linesY + 12, lineRight, linesY + 12)
     doc.setLineDashPattern([], 0)
-    // baseline (solid)
     doc.setDrawColor(150)
     doc.line(lineLeft, baseline, lineRight, baseline)
-    cursorY = baseline + 8
+    cursorY = baseline + 6
   }
 
-  // Transliteration + phonetic guide
   doc.setFont('helvetica', 'italic')
-  doc.setFontSize(14)
-  doc.setTextColor(35, 109, 134) // phonetic-600
-  doc.text(card.khmer_transliteration || '', slot.x + slot.w / 2, cursorY + 12, {
+  doc.setFontSize(13)
+  doc.setTextColor(35, 109, 134)
+  doc.text(card.khmer_transliteration || '', slot.x + slot.w / 2, cursorY + 10, {
     align: 'center',
     maxWidth: slot.w - 40,
   })
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(11)
-  doc.setTextColor(58, 139, 166) // phonetic-500
-  doc.text(`pronounced “${card.english_phonetic || ''}”`, slot.x + slot.w / 2, cursorY + 30, {
+  doc.setFontSize(10)
+  doc.setTextColor(58, 139, 166)
+  doc.text(`“${card.english_phonetic || ''}”`, slot.x + slot.w / 2, cursorY + 26, {
     align: 'center',
     maxWidth: slot.w - 40,
-  })
-
-  // Footer hint
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(170)
-  doc.text('What does this mean?', slot.x + slot.w / 2, slot.y + slot.h - 10, {
-    align: 'center',
   })
   doc.setTextColor(0)
 }
 
-function drawBack(doc, slot, card, { includeImagePlaceholder }) {
+function drawEnglishSide(doc, slot, card, { includeImagePlaceholder }) {
   drawCardOutline(doc, slot)
+  drawSideLabel(doc, slot, 'ENGLISH', [53, 109, 60])
 
-  // Label
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(53, 109, 60) // english-600
-  doc.text('ENGLISH', slot.x + 14, slot.y + 18)
-
-  // Image placeholder
-  let imageBottom = slot.y + 24
-  if (includeImagePlaceholder) {
-    const boxW = slot.w * 0.55
-    const boxH = slot.h * 0.42
-    const boxX = slot.x + (slot.w - boxW) / 2
-    const boxY = slot.y + 30
-
-    if (card.image_url && card.image_url.startsWith('data:image')) {
-      try {
-        const fmt = /^data:image\/(jpe?g)/i.test(card.image_url) ? 'JPEG' : 'PNG'
-        doc.addImage(card.image_url, fmt, boxX, boxY, boxW, boxH, undefined, 'FAST')
-      } catch {
-        drawImageBox(doc, boxX, boxY, boxW, boxH)
-      }
-    } else {
-      drawImageBox(doc, boxX, boxY, boxW, boxH)
-    }
-    imageBottom = boxY + boxH
-  }
-
-  // English translation
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(28)
-  doc.setTextColor(35, 77, 40) // english-700
-  doc.text(card.english_translation || '', slot.x + slot.w / 2, imageBottom + 40, {
-    align: 'center',
-    maxWidth: slot.w - 40,
+  const imageBottom = drawCardImage(doc, slot, card, {
+    includePlaceholder: includeImagePlaceholder,
+    tone: 'english',
   })
 
-  // Subtle reminder of the front side
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(30)
+  doc.setTextColor(35, 77, 40)
+  doc.text(
+    card.english_translation || '',
+    slot.x + slot.w / 2,
+    (imageBottom ?? slot.y + slot.h / 2) + 38,
+    { align: 'center', maxWidth: slot.w - 40 },
+  )
+
+  // Pronunciation reminder at the bottom (helps Khmer-speaking learners).
   doc.setFont('helvetica', 'italic')
   doc.setFontSize(9)
   doc.setTextColor(120)
@@ -270,15 +301,16 @@ function drawBack(doc, slot, card, { includeImagePlaceholder }) {
   doc.setTextColor(0)
 }
 
-function drawImageBox(doc, x, y, w, h) {
-  doc.setDrawColor(180, 200, 184) // english-100ish
+function drawImageBox(doc, x, y, w, h, tone) {
+  const stroke = tone === 'khmer' ? [212, 180, 140] : [180, 200, 184]
+  doc.setDrawColor(...stroke)
   doc.setLineWidth(0.8)
   doc.setLineDashPattern([4, 3], 0)
   doc.roundedRect(x, y, w, h, 6, 6, 'S')
   doc.setLineDashPattern([], 0)
   doc.setFont('helvetica', 'italic')
   doc.setFontSize(9)
-  doc.setTextColor(140, 160, 145)
+  doc.setTextColor(150)
   doc.text('draw or paste a picture here', x + w / 2, y + h / 2 + 3, { align: 'center' })
   doc.setTextColor(0)
 }

@@ -8,6 +8,7 @@ export default function PrintModal({ deck, cards, onClose }) {
   const [includePractice, setIncludePractice] = useState(true)
   const [includeImagePlaceholder, setIncludeImagePlaceholder] = useState(true)
   const [layout, setLayout] = useState('2-per-page') // or '4-per-page'
+  const [direction, setDirection] = useState('khmer-first') // or 'english-first'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // Wait for the Khmer web font before we let users export, so the
@@ -43,6 +44,7 @@ export default function PrintModal({ deck, cards, onClose }) {
         includePractice,
         includeImagePlaceholder,
         layout,
+        direction,
       })
     } catch (e) {
       console.error(e)
@@ -92,6 +94,24 @@ export default function PrintModal({ deck, cards, onClose }) {
           >
             select all
           </button>
+        </div>
+
+        <div>
+          <label className="label">Front of card</label>
+          <div className="grid grid-cols-2 gap-2">
+            <LayoutOption
+              checked={direction === 'khmer-first'}
+              onChange={() => setDirection('khmer-first')}
+              title="Khmer → English"
+              desc="For English speakers learning Khmer"
+            />
+            <LayoutOption
+              checked={direction === 'english-first'}
+              onChange={() => setDirection('english-first')}
+              title="English → Khmer"
+              desc="For Khmer speakers learning English"
+            />
+          </div>
         </div>
 
         <div>
