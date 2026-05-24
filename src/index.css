@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  .font-khmer {
+    font-feature-settings: normal;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-khmer-600 text-white hover:bg-khmer-700;
+  }
+  .btn-secondary {
+    @apply btn bg-ink-100 text-ink-900 hover:bg-ink-200;
+  }
+  .btn-ghost {
+    @apply btn text-ink-800 hover:bg-ink-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-50 text-red-700 hover:bg-red-100;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:border-khmer-500 focus:outline-none focus:ring-2 focus:ring-khmer-500/20;
+  }
+  .label {
+    @apply block text-xs font-medium uppercase tracking-wide text-ink-800/70 mb-1;
+  }
+  .panel {
+    @apply rounded-xl border border-ink-200 bg-white shadow-card;
+  }
+  .kbd {
+    @apply inline-block rounded border border-ink-200 bg-white px-1.5 py-0.5 text-[10px] font-mono text-ink-800/80 shadow-sm;
+  }
+}
+
+/* 3D flip card */
+.flip-scene {
+  perspective: 1600px;
+}
+.flip-card {
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0.05, 0.2, 1);
+  position: relative;
+}
+.flip-card.flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* hide back content until after the flip completes */
+.back-content {
+  opacity: 0;
+  transition: opacity 0.25s ease-in;
+}
+.back-content.revealed {
+  opacity: 1;
+}
+
+/* Print styles for fallback browser printing */
+@media print {
+  body {
+    background: white;
+  }
+}
