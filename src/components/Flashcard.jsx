@@ -104,11 +104,14 @@ function EnglishSide({ card, hint }) {
 }
 
 function CardImage({ card, tone }) {
-  if (card.image_url) {
+  const [broken, setBroken] = useState(false)
+  useEffect(() => setBroken(false), [card?.id, card?.image_url])
+  if (card.image_url && !broken) {
     return (
       <img
         src={card.image_url}
         alt={card.english_translation}
+        onError={() => setBroken(true)}
         className="max-h-28 w-auto rounded-lg object-contain"
       />
     )

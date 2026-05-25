@@ -2,7 +2,7 @@
 // localStorage so the app is fully usable out of the box.
 
 import { supabase, hasSupabase } from './supabase'
-import { seedDecks } from './seedData'
+import { seedDecks, seedImagePath } from './seedData'
 
 const LS_KEY = 'khmer-flashcards:v1'
 
@@ -41,7 +41,9 @@ function readLocal() {
         khmer_transliteration: c.khmer_transliteration,
         english_phonetic: c.english_phonetic,
         english_translation: c.english_translation,
-        image_url: null,
+        // Points at the file scripts/generate-images.mjs writes. The UI
+        // falls back to a placeholder if the file isn't there yet.
+        image_url: seedImagePath(d.slug, c.english_translation),
         learned: false,
         created_at: nowIso(),
       })

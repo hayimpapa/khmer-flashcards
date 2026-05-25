@@ -50,6 +50,24 @@ function placeKhmerImage(doc, text, opts) {
 // Inches → points
 const IN = 72
 
+async function loadImageDataUrl(url) {
+  if (!url) return null
+  if (url.startsWith('data:')) return url
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise((resolve) => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result)
+      r.onerror = () => resolve(null)
+      r.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 export async function generateFlashcardsPdf({
   deckName,
   cards,
@@ -59,6 +77,14 @@ export async function generateFlashcardsPdf({
   direction = 'khmer-first',
 }) {
   if (!cards || cards.length === 0) throw new Error('No cards selected.')
+
+  // Pre-resolve every card image to a data URL so the rest of the
+  // drawing code can stay synchronous. Missing files become null and
+  // fall through to the placeholder.
+  const resolved = await Promise.all(
+    cards.map(async (c) => ({ ...c, image_url: await loadImageDataUrl(c.image_url) })),
+  )
+  cards = resolved
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' })
   const pageW = doc.internal.pageSize.getWidth() // 612pt
