@@ -51,8 +51,36 @@ tighten them (e.g. `auth.uid() is not null`) before going to production.
 offline and database datasets in sync. After editing the word list:
 
 ```bash
-node scripts/generate-seed-sql.mjs
+npm run seed:sql
 ```
+
+## Generating card images (free, via Pollinations.ai)
+
+Every seed card has a conventional image path
+(`/images/<deck-slug>/<english-slug>.jpg`). To actually populate those
+files, run:
+
+```bash
+npm run seed:images
+```
+
+The script asks [pollinations.ai](https://pollinations.ai) for one
+cartoon illustration per card — no API key, no signup, no quota — and
+writes them to `public/images/`. It's idempotent: re-running skips files
+that already exist. Pass `--force` to regenerate everything, or a deck
+slug (`npm run seed:images animals`) to limit scope. Prompts are tuned
+in the `PROMPT_OVERRIDES` table at the top of
+`scripts/generate-images.mjs` — edit, re-run with `--force`, and your
+deck gets a fresh look.
+
+`public/images/` is gitignored by default since the files are easy to
+regenerate; un-ignore it if you want to commit the generated set so
+collaborators don't each spend an hour hitting the API.
+
+If you'd rather use real photos (food, animals, objects look more
+convincing as photos than as flat illustrations), swap the `fetchImage`
+URL in the script for a Pexels or Unsplash query — both have generous
+free tiers; Pexels doesn't require attribution.
 
 ## Project layout
 

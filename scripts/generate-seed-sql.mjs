@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const seedModule = await import(
   pathToFileURL(join(__dirname, '..', 'src', 'lib', 'seedData.js')).href
 )
-const { seedDecks } = seedModule
+const { seedDecks, seedImagePath } = seedModule
 
 function esc(s) {
   return String(s ?? '').replace(/'/g, "''")
@@ -76,12 +76,13 @@ for (const deck of seedDecks) {
   )
   for (const c of deck.cards) {
     total += 1
+    const imagePath = seedImagePath(deck.slug, c.english_translation)
     lines.push(
-      `  insert into public.cards (deck_id, khmer_text, khmer_transliteration, english_phonetic, english_translation) values (${deckVar}, '${esc(
+      `  insert into public.cards (deck_id, khmer_text, khmer_transliteration, english_phonetic, english_translation, image_url) values (${deckVar}, '${esc(
         c.khmer_text,
       )}', '${esc(c.khmer_transliteration)}', '${esc(c.english_phonetic)}', '${esc(
         c.english_translation,
-      )}');`,
+      )}', '${esc(imagePath)}');`,
     )
   }
   lines.push('end $$;')

@@ -156,3 +156,17 @@ export const seedDecks = [
 ]
 
 export const totalSeedCards = seedDecks.reduce((n, d) => n + d.cards.length, 0)
+
+// Convention used by both the localStorage hydration and the SQL seed
+// (and by scripts/generate-images.mjs when it saves files). Keep in
+// sync with the slugify in that script.
+export function slugifyForImage(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export function seedImagePath(deckSlug, englishTranslation) {
+  return `/images/${deckSlug}/${slugifyForImage(englishTranslation)}.jpg`
+}
